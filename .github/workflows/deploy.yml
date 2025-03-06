@@ -3,14 +3,20 @@ name: Deploy to Elastic Beanstalk
 on:
   push:
     branches:
-      - main # Deploy only when pushing to main
+      - main  # Deploy only when pushing to main
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     env:
+      AWS_REGION: "us-east-1"
+      EB_APPLICATION_NAME: "frontend"
+      EB_ENVIRONMENT_NAME: "Frontend-env"
+      S3_BUCKET_NAME: "elasticbeanstalk-us-east-1-449227724538"
       DOCKER_IMAGE_NAME: "thomasstrupp/docker-react"
+      BUCKET_PATH: "frontend"
+      ZIP_FILE: "docker-react.zip"
 
     steps:
       - name: Checkout repository
@@ -19,10 +25,45 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build and tag Docker image
-        run: |
-          docker build -t $DOCKER_IMAGE_NAME -f Dockerfile.dev .
-          docker tag $DOCKER_IMAGE_NAME:latest $DOCKER_IMAGE_NAME:latest
+      - name: Build Docker Image
+        run: docker build -t $DOCKER_IMAGE_NAME -f Dockerfile.dev .
 
-      - name: Run tests
+      - name: Run Tests
         run: docker run -e CI=true $DOCKER_IMAGE_NAME npm run test
+
+      - name: Install AWS CLI & Elastic Beanstalk CLI
+        run: |
+          sudo apt-get update && sudo apt-get install -y unzip
+          curl -s "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+          unzip awscliv2.zip && sudo ./aws/install
+          pip install awsebcli --upgrade --user
+
+      - name: Create Deployment Package
+        run: |
+          mkdir -p .elasticbeanstalk
+          echo 'version: 1' > .elasticbeanstalk/config.yml
+          echo 'branch-defaults:' >> .elasticbeanstalk/config.yml
+          echo '  default:' >> .elasticbeanstalk/config.yml
+          echo '    environment: $EB_ENVIRONMENT_NAME' >> .elasticbeanstalk/config.yml
+          echo 'global:' >> .elasticbeanstalk/config.yml
+          echo "  application_name: $EB_APPLICATION_NAME" >> .elasticbeanstalk/config.yml
+          echo "  default_platform: Docker" >> .elasticbeanstalk/config.yml
+          echo "  default_region: $AWS_REGION" >> .elasticbeanstalk/config.yml
+          echo "  profile: eb-cli" >> .elasticbeanstalk/config.yml
+
+          mkdir -p .ebextensions
+          echo "option_settings:" > .ebextensions/docker.config
+          echo "  aws:elasticbeanstalk:container:docker:" >> .ebextensions/docker.config
+          echo "    ImageUpdatePolicy: 'None'" >> .ebextensions/docker.config
+
+          zip -r $ZIP_FILE Dockerfile .elasticbeanstalk .ebextensions .platform .ebextensions
+
+      - name: Deploy to Elastic Beanstalk
+        run: |
+          aws s3 cp $ZIP_FILE s3://$S3_BUCKET_NAME/$BUCKET_PATH/$ZIP_FILE
+          aws elasticbeanstalk create-application-version --application-name $EB_APPLICATION_NAME --version-label $GITHUB_SHA --source-bundle S3Bucket=$S3_BUCKET_NAME,S3Key=$BUCKET_PATH/$ZIP_FILE
+          aws elasticbeanstalk update-environment --environment-name $EB_ENVIRONMENT_NAME --version-label $GITHUB_SHA
+
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
