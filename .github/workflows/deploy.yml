@@ -1,0 +1,28 @@
+name: Deploy to Elastic Beanstalk
+
+on:
+  push:
+    branches:
+      - main # Deploy only when pushing to main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    env:
+      DOCKER_IMAGE_NAME: "thomasstrupp/docker-react"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and tag Docker image
+        run: |
+          docker build -t $DOCKER_IMAGE_NAME -f Dockerfile.dev .
+          docker tag $DOCKER_IMAGE_NAME:latest $DOCKER_IMAGE_NAME:latest
+
+      - name: Run tests
+        run: docker run -e CI=true $DOCKER_IMAGE_NAME npm run test
