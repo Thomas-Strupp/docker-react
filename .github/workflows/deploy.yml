@@ -49,7 +49,7 @@ jobs:
           mkdir -p .ebextensions
           echo "option_settings:" > .ebextensions/docker.config
           echo "  aws:elasticbeanstalk:container:docker:" >> .ebextensions/docker.config
-          echo "    ImageUpdatePolicy: 'None'" >> .ebextensions/docker.config
+          echo "    EnvironmentType: 'SingleInstance'" >> .ebextensions/docker.config
 
           zip -r $ZIP_FILE Dockerfile .elasticbeanstalk .ebextensions .platform .ebextensions
 
