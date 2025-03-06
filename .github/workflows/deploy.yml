@@ -46,7 +46,7 @@ jobs:
           echo "  default_region: $AWS_REGION" >> .elasticbeanstalk/config.yml
           echo "  profile: eb-cli" >> .elasticbeanstalk/config.yml
 
-          zip -r $ZIP_FILE Dockerfile .elasticbeanstalk
+          zip -r $ZIP_FILE Dockerfile .elasticbeanstalk package.json package-lock.json src/ public/
 
       - name: Deploy to Elastic Beanstalk
         run: |
