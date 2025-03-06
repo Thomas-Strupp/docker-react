@@ -3,13 +3,15 @@ name: Deploy to Elastic Beanstalk
 on:
   push:
     branches:
-      - main  # Deploy only when pushing to main
+      - main # Deploy only when pushing to main
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       AWS_REGION: "us-east-1"
       EB_APPLICATION_NAME: "frontend"
       EB_ENVIRONMENT_NAME: "Frontend-env"
@@ -63,7 +65,3 @@ jobs:
           aws s3 cp $ZIP_FILE s3://$S3_BUCKET_NAME/$BUCKET_PATH/$ZIP_FILE
           aws elasticbeanstalk create-application-version --application-name $EB_APPLICATION_NAME --version-label $GITHUB_SHA --source-bundle S3Bucket=$S3_BUCKET_NAME,S3Key=$BUCKET_PATH/$ZIP_FILE
           aws elasticbeanstalk update-environment --environment-name $EB_ENVIRONMENT_NAME --version-label $GITHUB_SHA
-
-    env:
-      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
