@@ -46,12 +46,7 @@ jobs:
           echo "  default_region: $AWS_REGION" >> .elasticbeanstalk/config.yml
           echo "  profile: eb-cli" >> .elasticbeanstalk/config.yml
 
-          mkdir -p .ebextensions
-          echo "option_settings:" > .ebextensions/docker.config
-          echo "  aws:elasticbeanstalk:container:docker:" >> .ebextensions/docker.config
-          echo "    EnvironmentType: 'SingleInstance'" >> .ebextensions/docker.config
-
-          zip -r $ZIP_FILE Dockerfile .elasticbeanstalk .ebextensions .platform .ebextensions
+          zip -r $ZIP_FILE Dockerfile .elasticbeanstalk
 
       - name: Deploy to Elastic Beanstalk
         run: |
